@@ -1,111 +1,145 @@
-/* Fontes e variáveis de cor */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+// LÓGICA DE VERIFICAÇÃO DE IDADE
+const idadeInput = document.getElementById('idadeInput');
+const verifyButton = document.getElementById('verifyButton');
+const result = document.getElementById('resultado'); 
 
-:root{
-    --cor-fundo: #f4f7f9; 
-    --cor-container: #ffffff;
-    --cor-primaria: #007bff;
-    --cor-texto-principal: #333333;
-    --cor-texto-secundario: #6c757d;
-    --cor-borda: #dee2e6;
-    --fonte-principal: 'Popins', sans-serif;
+function verificarIdade(){
+    result.classList.remove('visivel');
+    const idade = parseInt(idadeInput.value);
+    let menssagem = '';
+
+    if(isNaN(idade) || idade < 0){
+        menssagem = 'Por favor, insira uma idade válida.';
+    }else if(idade < 18){
+        menssagem = 'VOcê é menor de idade.';
+    }else if(idade < 60){
+        menssagem = 'Você é adulto.';
+    }else{
+        menssagem = 'Você é idoso.';
+    }
+
+    setTimeout(() => {
+        result.innerText = menssagem;
+        result.classList.add('visivel');
+    }, 100);
 }
 
-/* 2. Estilos  Gerais*/
+verifyButton.addEventListener('click', verificarIdade);
+idadeInput.addEventListener('keyup', (event) => {
+    if(event.key === 'Enter') verificarIdade();
+});
 
-body{
-    background-color: var(--cor-fundo);
-    color: var(--cor-texto-principal);
-    font-family: var(--fonte-principal);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    /* impede que o conteúdo do body afete o canvas */
-    overflow: hidden;
+// animação do canvas de fundo
+
+const canvas = document.getElementById('background-canvas');
+const ctx = canvas.getContext('2d'); // contexto 2d do canvas, onde vamos desenhar
+
+// ajusta o tamanho do canvas para preencher o tamanho da janela
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Objeto para armazenar a posição do mouse
+let mouse  = {
+    x: null,
+    y: null,
+    radius: 150 // área de influência do mouse
+};
+
+window.addEventListener('mousemove', (event) => {
+    mouse.x = event.x;
+    mouse.y = event.y;
+});
+
+// array para armazenar as partículas
+let particulasArray = [];
+const numeroDeParticulas = 100;
+
+// classe para representar cada partícula
+class Particula{
+    constructor(x, y, direcaoX, direcaoY, tamanho, cor){
+        this.x = x;
+        this.y = y;
+        this.direcaoX = direcaoX;
+        this.direcaoY = direcaoY;
+        this.tamanho = tamanho;
+        this.cor = cor;
+    }
+    // método para desenhar a partícula no canvas (método = função dentro de uma classe)
+    desenhar(){
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.tamanho, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#007bff';
+        ctx.fill();
+    }
+
+    // método para atualizar a posição da partícula
+    atualizar(){
+        if(this.x > canvas.width || this.x < 0){
+            this.direcaoX = -this.direcaoX;
+        }
+        if(this.y > canvas.height || this.y < 0){
+            this.direcaoY = -this.direcaoY;
+        }
+        this.x += this.direcaoX;
+        this.y += this.direcaoY;
+        this.desenhar();
+    }
 }
 
+// fora da classe, função para criar o array de partículas
+function init(){
+    particulasArray = [];
+    for(let i =0; i < numeroDeParticulas; i++){
+        let tamanho = Math.random() * 2 + 1;
+        let x = Math.random() * (innerWidth - tamanho * 2) + tamanho;
+        let y = Math.random() * (innerHeight - tamanho * 2) + tamanho;
+        let direcaoX = (Math.random() * 0.4) - 0.2;
+        let direcaoY = (Math.random() * 0.4) - 0.2;
+        let cor = '#007bff';
+        particulasArray.push(new Particula(x, y, direcaoX, direcaoY, tamanho, cor));
+    }
+} 
 
-/* Estilo do canvas de fundo */
-#background-canvas{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Garante que o canvas fique atrás de todo o conteúdo */
-    z-index: -1;
+//  função para conectar as partículas com linhas
+function conectar(){
+    for(let a  = 0; a < particulasArray.length; a++){
+        for(let b  = a; b < particulasArray.length; b++){
+            let distancia = ((particulasArray[a].x - particulasArray[b].x) * (particulasArray[a].x - particulasArray[b].x))  +  ((particulasArray[a].y - particulasArray[b].y) * (particulasArray[a].y - particulasArray[b].y))
+        
+            // se a distância for menor que um certo valor, desenha uma linha
+            if(distancia < (canvas.width/7) * (canvas.height/7)){
+                ctx.strokeStyle = `rgba(0, 123, 255, ${1 - (distancia/20000)})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(particulasArray[a].x, particulasArray[a].y);
+                ctx.lineTo(particulasArray[b].x, particulasArray[b].y);
+                ctx.stroke();
+            }
+        }
+    }
 }
 
-/* 4. O container do formulário (Desing Clássico) */
-.container{
-    width: 380px;
-    padding: 40px;
-    background-color: var(--cor-container);
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    border: 1px solid var(--cor-borda);    
+// loop de animação
+function animar(){
+    requestAnimationFrame(animar);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //  limpa o canvas a cada frame
+    for(let  i = 0; i < particulasArray.length; i++){
+        particulasArray[i].atualizar();
+    }
+    conectar();
 }
+// recria as  particulas quando a janela é redimensionada
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    init();
+})
 
-h1{
-    font-weight: 600;
-    margin-bottom: 8px;
-}
+window.addEventListener('mouseout', () =>{
+    mouse.x=undefined;
+    mouse.y=undefined;
+});
 
-.subtitulo{
-    color: var(--cor-texto-secundario);
-    margin-top: 0;
-    margin-bottom: 30px; 
-    /* mudei o margin bottom para 30px era 20px*/
-}
-
-/* 5. Estilos dos campos do formulário */
-input, button{
-    width: 100%;
-    /* Garante que o padding não afete a largura total */
-    box-sizing: border-box;
-    margin: 10px 0;
-    /* adicionei um margin para colocar espaçamento */
-    padding: 14px;
-    /* mudei o padding para 14px era 12px*/
-    font-size: 16px;
-    font-family: var(--fonte-principal);
-    border-radius: 8px;
-    border: 1px solid var(--cor-borda);
-    transition: all 0.3s ease;
-}
-
-input:focus{
-    outline: none;
-    border-color: var(--cor-primaria);
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
-}
-
-button{
-    cursor: pointer;
-    font-weight: 600;
-    background-color: var(--cor-primaria);
-    color: white;
-    border: none;
-}
-
-button:hover{
-    opacity: 0.85;
-}
-
-/* 6. EStilo do resultado */
-#resultado{
-    margin-top: 20px;
-    font-size: 18px;
-    font-weight: 600;
-    min-height: 25px;
-    color: var(--cor-primaria); 
-    opacity: 0;
-    transition: opacity 0.5s ease;
-}
-
-#resultado.visivel{
-    opacity: 1;
-}
+init();
+animar();
